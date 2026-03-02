@@ -1,0 +1,14 @@
+ion-card {
+  margin: 16px;
+}
+
+ion-textarea {
+  --padding-start: 8px;
+  --padding-end: 8px;
+  --padding-top: 8px;
+  --padding-bottom: 8px;
+}
+
+ion-button {
+  margin-top: 8px;
+}

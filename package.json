@@ -9,7 +9,8 @@
     "preview": "vite preview",
     "test.e2e": "cypress run",
     "test.unit": "vitest",
-    "lint": "eslint"
+    "lint": "eslint",
+    "compare-range": "bash scripts/compare-range-requests.sh"
   },
   "dependencies": {
     "@capacitor/android": "8.1.1-nightly-20260227T151709.0",

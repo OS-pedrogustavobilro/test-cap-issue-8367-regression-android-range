@@ -148,19 +148,6 @@ const RangeTest: React.FC = () => {
     setResults([]);
   };
 
-  const exportResults = () => {
-    const resultsJson = JSON.stringify(results, null, 2);
-    const blob = new Blob([resultsJson], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `range-test-results-${Date.now()}.json`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  };
-
   const getExpectedBytes = (start: number, end: number): string => {
     // Based on the test-file.txt content
     const content =
@@ -221,9 +208,6 @@ const RangeTest: React.FC = () => {
                 <>
                   <IonButton expand="block" fill="outline" onClick={clearResults}>
                     Clear Results
-                  </IonButton>
-                  <IonButton expand="block" fill="outline" onClick={exportResults}>
-                    Export Results (JSON)
                   </IonButton>
                 </>
               )}

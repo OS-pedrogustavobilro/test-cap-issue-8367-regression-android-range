@@ -1,0 +1,6 @@
+ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyz
+The quick brown fox jumps over the lazy dog.
+0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF
+Range request test file with known content for byte verification.
+This file contains exactly 256 bytes of predictable ASCII text data.
+End of test file padding to reach exactly 256 bytes total size!!

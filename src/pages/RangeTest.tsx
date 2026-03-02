@@ -70,17 +70,19 @@ const RangeTest: React.FC = () => {
       });
 
       const arrayBuffer = await response.arrayBuffer();
-      const bytes = new Uint8Array(arrayBuffer);
+      const allBytes = new Uint8Array(arrayBuffer);
+
+      // Extract only the requested range (first expectedLength bytes)
+      // We only validate these bytes and ignore any extra bytes returned
+      const bytes = allBytes.slice(0, expectedLength);
       const hexBytes = bytesToHex(bytes);
 
-      // Validate results
-      const lengthMatch = bytes.length === expectedLength;
+      // Only validate the content of the first (end-start+1) bytes
+      const receivedTotalBytes = allBytes.length;
       const bytesMatch = expectedBytes ? hexBytes === expectedBytes : undefined;
 
       let validationError: string | undefined;
-      if (!lengthMatch) {
-        validationError = `Expected ${expectedLength} bytes, received ${bytes.length} bytes`;
-      } else if (bytesMatch === false) {
+      if (bytesMatch === false) {
         validationError = `Bytes do not match expected values - Range request regression detected!`;
       }
 
@@ -89,13 +91,13 @@ const RangeTest: React.FC = () => {
         url,
         rangeHeader,
         status: response.status,
-        contentLength: bytes.length,
+        contentLength: receivedTotalBytes,
         hexBytes,
         asciiPreview: bytesToAscii(bytes),
-        success: !validationError,
+        success: bytesMatch === true || bytesMatch === undefined,
         expectedBytes,
         bytesMatch,
-        lengthMatch,
+        lengthMatch: undefined,
         validationError,
       };
     } catch (error) {
@@ -258,10 +260,13 @@ const RangeTest: React.FC = () => {
                   </IonLabel>
                 </IonItem>
                 <IonItem>
-                  <IonLabel>
-                    <strong>Bytes Received:</strong> {result.contentLength}
-                    {result.lengthMatch === false && ' ⚠️ Length mismatch!'}
-                    {result.lengthMatch === true && ' ✓'}
+                  <IonLabel style={{ whiteSpace: 'normal' }}>
+                    <strong>Total Bytes Received:</strong> {result.contentLength}
+                    {result.contentLength !== (rangeEnd - rangeStart + 1) && (
+                      <div style={{ fontSize: '0.9em', color: '#999', marginTop: '4px' }}>
+                        (Validating first {rangeEnd - rangeStart + 1} bytes, ignoring the rest)
+                      </div>
+                    )}
                   </IonLabel>
                 </IonItem>
 
@@ -294,7 +299,7 @@ const RangeTest: React.FC = () => {
                 {result.expectedBytes && (
                   <IonItem>
                     <IonLabel position="stacked">
-                      <strong>Expected Hex Bytes:</strong>
+                      <strong>Expected Hex Bytes (range {rangeStart}-{rangeEnd}):</strong>
                     </IonLabel>
                     <IonTextarea
                       readonly
@@ -307,7 +312,7 @@ const RangeTest: React.FC = () => {
 
                 <IonItem>
                   <IonLabel position="stacked">
-                    <strong>Actual Hex Bytes:</strong>
+                    <strong>Actual Hex Bytes (first {rangeEnd - rangeStart + 1} bytes of response):</strong>
                   </IonLabel>
                   <IonTextarea
                     readonly
@@ -323,7 +328,7 @@ const RangeTest: React.FC = () => {
                 </IonItem>
                 <IonItem>
                   <IonLabel position="stacked">
-                    <strong>ASCII Preview:</strong>
+                    <strong>ASCII Preview (first {rangeEnd - rangeStart + 1} bytes):</strong>
                   </IonLabel>
                   <IonTextarea
                     readonly

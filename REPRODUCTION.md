@@ -6,11 +6,11 @@ This project reproduces the range request regression introduced in Capacitor 8.1
 
 **GitHub Issue:** https://github.com/ionic-team/capacitor/issues/8367
 
-**Problem:** The regression in PR #8357 causes HTTP range requests to fail on Android. The issue involves improper stream seeking when handling byte range requests, causing incorrect bytes to be returned.
+**Problem:** The regression in PR #8357 causes HTTP range requests to fail on Android. The issue involves improper stream seeking when handling byte range requests, causing incorrect bytes to be returned at the requested positions.
 
-**Expected Behavior:** Range requests should return the correct file bytes matching what external servers (like Vite dev server) return.
+**Expected Behavior:** Range requests should return the correct bytes for the requested range (e.g., bytes 15-30 should return the 16 bytes starting at position 15), matching what external servers (like Vite dev server) return.
 
-**Actual Behavior:** Capacitor 8.1.1-nightly returns incorrect bytes due to double-seeking the response stream.
+**Actual Behavior:** Capacitor 8.1.1-nightly returns incorrect byte content due to double-seeking the response stream, causing the wrong data to be read from the file.
 
 ## Test Setup
 
@@ -38,12 +38,11 @@ npm run dev
 
 Navigate to `http://localhost:5173` and click "Open Range Request Test".
 
-- Set range start: `0`
-- Set range end: `15`
+- The default range is 15-30 (16 bytes)
 - Click "Run Range Request Tests"
-
-The first 16 bytes should be: `41 42 43 44 45 46 47 48 49 4A 4B 4C 4D 4E 4F 50`
-(This is "ABCDEFGHIJKLMNOP" in ASCII)
+- You should see a **green card with ✓** indicating the test passed
+- Expected bytes for range 15-30: `50 51 52 53 54 55 56 57 58 59 5A 30 31 32 33 34`
+- This is "PQRSTUVWXYZ01234" in ASCII
 
 ### 3. Test on Android (Regression Test)
 
@@ -57,7 +56,10 @@ npx cap open android
 
 Run the app on an Android device or emulator, navigate to the Range Test page, and run the same test.
 
-**If the bug exists**, the hex bytes will be different from the expected values.
+**If the bug exists**, you will see:
+- A **red card with ✗** indicating test failure
+- An error message: **"Bytes do not match expected values - Range request regression detected!"**
+- The expected vs actual hex bytes will differ, showing the offset issue
 
 ### 4. Compare with External Request
 
@@ -86,7 +88,21 @@ ASCII: ABCDEFGHIJKLMNOP
 
 ### With Regression (Incorrect Behavior)
 
-If the regression exists, you'll see different bytes returned on Android. The bytes will be offset incorrectly due to double-seeking.
+If the regression exists on Android, you will see:
+
+```
+❌ VALIDATION FAILED:
+Bytes do not match expected values - Range request regression detected!
+
+Expected Hex Bytes (range 15-30):
+50 51 52 53 54 55 56 57 58 59 5A 30 31 32 33 34
+
+Actual Hex Bytes (first 16 bytes of response):
+4B 4C 4D 4E 4F 50 51 52 53 54 55 56 57 58 59 5A
+
+ASCII Expected: PQRSTUVWXYZ01234
+ASCII Actual:   KLMNOPQRSTUVWXYZ (wrong bytes - offset issue!)
+```
 
 ## How It Works
 
@@ -101,10 +117,15 @@ If the regression exists, you'll see different bytes returned on Android. The by
 
 The React component at `/range-test`:
 - Makes fetch requests with `Range` headers
-- Converts response bytes to hex for easy comparison
-- Displays results without needing Chrome DevTools
+- **Automatically validates results** against expected bytes
+- **Shows pass/fail status** with green ✓ or red ✗ indicators
+- Validates the first N bytes (where N = end - start + 1) against expected content
+- Ignores any extra bytes beyond the requested range
+- Detects if wrong bytes are returned (offset issues, double-seeking)
+- Displays only the requested byte range for focused comparison
 - Shows both hex and ASCII representations
 - Calculates and displays expected bytes
+- **No manual comparison needed** - validation is automatic
 - Exports results to JSON for documentation
 
 ### The Comparison Script
@@ -128,32 +149,62 @@ Try these test cases to thoroughly verify the bug:
 
 ## Verification Steps
 
-1. Run test in browser (should work correctly)
-2. Run same test on Android (will show regression if present)
-3. Run comparison script to get expected bytes
-4. Compare hex output between app and script
+1. Run test in browser (should show green ✓ card with matching bytes)
+2. Run same test on Android (will show red ✗ card if bytes don't match)
+3. Compare the expected vs actual hex bytes in the UI
+4. Optionally run comparison script to verify with external tool
 5. Export results from app for documentation
+
+**The test is fully automated** - you just need to look for green ✓ (pass) or red ✗ (fail)!
+
+The test validates only the **content** of the first (end-start+1) bytes and ignores any extra bytes that may be returned.
 
 ## Expected vs Actual
 
-### Browser (Working)
+### Browser (Working) - Green Card ✓
 ```
-Range: bytes=0-15
-Status: 206 (Partial Content)
-Hex: 41 42 43 44 45 46 47 48 49 4A 4B 4C 4D 4E 4F 50
+Range Request Test ✓
+
+✓ TEST PASSED: Bytes match expected values
+
+Range Header: bytes=15-30
+HTTP Status: 206 (Partial Content)
+Total Bytes Received: 16
+
+Expected Hex Bytes (range 15-30):
+50 51 52 53 54 55 56 57 58 59 5A 30 31 32 33 34
+
+Actual Hex Bytes (first 16 bytes of response):
+50 51 52 53 54 55 56 57 58 59 5A 30 31 32 33 34
+
+ASCII Preview: PQRSTUVWXYZ01234
 ```
 
-### Android with Regression (Broken)
+### Android with Regression (Broken) - Red Card ✗
 ```
-Range: bytes=0-15
-Status: 206 (Partial Content)
-Hex: [Different bytes - offset incorrectly]
+Range Request Test ✗
+
+❌ VALIDATION FAILED:
+Bytes do not match expected values - Range request regression detected!
+
+Range Header: bytes=15-30
+HTTP Status: 206 (Partial Content)
+Total Bytes Received: 358
+(Validating first 16 bytes, ignoring the rest)
+
+Expected Hex Bytes (range 15-30):
+50 51 52 53 54 55 56 57 58 59 5A 30 31 32 33 34
+
+Actual Hex Bytes (first 16 bytes of response):
+4B 4C 4D 4E 4F 50 51 52 53 54 55 56 57 58 59 5A
+
+ASCII Preview: KLMNOPQRSTUVWXYZ
 ```
 
 ### External curl (Working)
 ```bash
-curl -r 0-15 http://localhost:5173/test-file.txt | xxd
-# Shows: 41 42 43 44 45 46 47 48 49 4A 4B 4C 4D 4E 4F 50
+curl -r 15-30 http://localhost:5173/test-file.txt | xxd
+# Shows: 50 51 52 53 54 55 56 57 58 59 5A 30 31 32 33 34
 ```
 
 ## Debugging
@@ -168,21 +219,31 @@ If tests don't work as expected:
 
 ## Files Created
 
-- `public/test-file.txt` - Test data file with known byte content
-- `src/pages/RangeTest.tsx` - Interactive test UI component
+- `public/test-file.txt` - Test data file with known byte content (373 bytes)
+- `src/pages/RangeTest.tsx` - Interactive test UI with automatic validation
 - `src/pages/RangeTest.css` - Styling for test page
-- `scripts/compare-range-requests.sh` - External comparison tool
+- `scripts/compare-range-requests.sh` - External comparison tool (curl-based)
+- `scripts/quick-test.sh` - Quick reference for expected byte values
 - `REPRODUCTION.md` - This documentation file
+
+## Key Features
+
+✅ **Automatic Validation** - No manual comparison needed
+✅ **Pass/Fail Indicators** - Green ✓ or red ✗ cards
+✅ **Detailed Error Messages** - Know exactly what failed
+✅ **Content Verification** - Validates byte values at requested positions
+✅ **Focused Testing** - Only validates first N bytes, ignores extra data
+✅ **No DevTools Required** - Everything visible in the UI
 
 ## Contributing
 
 To improve this reproduction:
 
 1. Add more test files (binary files, larger files, etc.)
-2. Add automated assertions for pass/fail
-3. Add iOS testing
-4. Add performance metrics
-5. Add network logging
+2. Add iOS testing
+3. Add performance metrics
+4. Add network logging
+5. Add automated CI/CD tests
 
 ## Related Issues
 

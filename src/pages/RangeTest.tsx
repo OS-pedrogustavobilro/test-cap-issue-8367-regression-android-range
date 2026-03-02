@@ -35,8 +35,8 @@ interface TestResult {
 }
 
 const RangeTest: React.FC = () => {
-  const [rangeStart, setRangeStart] = useState<number>(0);
-  const [rangeEnd, setRangeEnd] = useState<number>(15);
+  const [rangeStart, setRangeStart] = useState<number>(15);
+  const [rangeEnd, setRangeEnd] = useState<number>(30);
   const [results, setResults] = useState<TestResult[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
 
@@ -188,7 +188,7 @@ const RangeTest: React.FC = () => {
                 <IonInput
                   type="number"
                   value={rangeStart}
-                  onIonInput={(e) => setRangeStart(parseInt(e.detail.value || '0', 10))}
+                  onIonInput={(e) => setRangeStart(parseInt(e.detail.value || '15', 10))}
                 />
               </IonItem>
               <IonItem>
@@ -196,7 +196,7 @@ const RangeTest: React.FC = () => {
                 <IonInput
                   type="number"
                   value={rangeEnd}
-                  onIonInput={(e) => setRangeEnd(parseInt(e.detail.value || '15', 10))}
+                  onIonInput={(e) => setRangeEnd(parseInt(e.detail.value || '30', 10))}
                 />
               </IonItem>
             </IonList>

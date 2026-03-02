@@ -1,0 +1,7 @@
+{
+  "name": "test-cap-issue-8367-regression-android-range",
+  "integrations": {
+    "capacitor": {}
+  },
+  "type": "react-vite"
+}

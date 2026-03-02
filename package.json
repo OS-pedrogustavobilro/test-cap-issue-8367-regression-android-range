@@ -17,7 +17,7 @@
     "@capacitor/app": "8.0.1",
     "@capacitor/core": "8.1.1-nightly-20260227T151709.0",
     "@capacitor/haptics": "8.0.1",
-    "@capacitor/ios": "8.1.1-nightly-20260227T151709.0",
+    "@capacitor/ios": "8.1.0",
     "@capacitor/keyboard": "8.0.1",
     "@capacitor/status-bar": "8.0.1",
     "@ionic/react": "^8.5.0",

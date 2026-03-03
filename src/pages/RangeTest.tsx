@@ -65,7 +65,7 @@ const RangeTest: React.FC = () => {
     try {
       const response = await fetch(url, {
         headers: {
-          'Range': rangeHeader,
+          'range': rangeHeader,
         },
       });
 
